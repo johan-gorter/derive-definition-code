@@ -42,6 +42,16 @@ doButton.addEventListener('click', () => {
     }
   }
 
+  let createDefinitionCollectionTemplate = (definitionType: string): TypeTemplate => {
+    let type = /\<(.*)\>/.exec(definitionType)[1];
+    return {
+      readCode: (propName: string) => 
+        `${propName} = JsonUtility.ParseArray(jsonReader, ${type}.Deserialize);`,
+      writeCode: (propName: string) => 
+        `jsonWriter.WriteArray(nameof(${propName}), ${propName});`
+    }
+  }
+
   const primitiveTemplates: {[dataType:string]: TypeTemplate} = {
     'string': {
       readCode: (propName: string) => `${propName} = jsonReader.ReadSafeAsString();`,
@@ -49,6 +59,10 @@ doButton.addEventListener('click', () => {
     },
     'bool': {
       readCode: (propName: string) => `${propName} = jsonReader.ReadSafeAsBoolean();`,
+      writeCode: (propName: string) => `writer.Write(nameof(${propName}), ${propName});`
+    },
+    'Guid': {
+      readCode: (propName: string) => `${propName} = jsonReader.ReadSafeAsGuid();`,
       writeCode: (propName: string) => `writer.Write(nameof(${propName}), ${propName});`
     },
     'IReadOnlyCollection<string>': {
@@ -64,6 +78,9 @@ doButton.addEventListener('click', () => {
     }
     if (dataType.endsWith('Definition')) {
       return createDefinitionTemplate(dataType);
+    }
+    if (dataType.endsWith('Definition>')) {
+      return createDefinitionCollectionTemplate(dataType);
     }
     return createEnumTemplate(dataType);
   }
@@ -121,7 +138,7 @@ namespace ${namespaceMatch[1]}
         default:
           return false;
       }
-    }    
+    }
   }
 }
 
