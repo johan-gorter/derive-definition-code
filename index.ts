@@ -3,7 +3,7 @@ doButton.addEventListener('click', () => {
   var source = (document.getElementById('source') as HTMLTextAreaElement).value;
 
   var namespaceMatch = /namespace\s(.*)\s/mg.exec(source);
-  var classMatch = /public partial class\s(.*)\s/mg.exec(source);
+  var classMatch = /public partial class\s(\S*)\s/mg.exec(source);
   var fields: {
     dataType: string;
     name: string;
@@ -27,18 +27,18 @@ doButton.addEventListener('click', () => {
   let createEnumTemplate = (enumType: string): TypeTemplate => {
     return {
       readCode: (propName: string) => 
-        `${propName} = (${enumType})Enum.Parse(typeof(${enumType}), jsonReader.ReadSafeAsString());`,
+        `${propName} = (${enumType})Enum.Parse(typeof(${enumType}), reader.ReadSafeAsString());`,
       writeCode: (propName: string) => 
-        `jsonWriter.Write(nameof(${propName}), ${propName}.ToString());`
+        `writer.Write(nameof(${propName}), ${propName}.ToString());`
     }
   }
 
   let createDefinitionTemplate = (definitionType: string): TypeTemplate => {
     return {
       readCode: (propName: string) => 
-        `${propName} = ${definitionType}.Deserialize(jsonReader);`,
+        `${propName} = ${definitionType}.Deserialize(reader);`,
       writeCode: (propName: string) => 
-        `jsonWriter.Write(nameof(${propName}), ${propName});`
+        `writer.Write(nameof(${propName}), ${propName});`
     }
   }
 
@@ -46,27 +46,27 @@ doButton.addEventListener('click', () => {
     let type = /\<(.*)\>/.exec(definitionType)[1];
     return {
       readCode: (propName: string) => 
-        `${propName} = JsonUtility.ParseArray(jsonReader, ${type}.Deserialize);`,
+        `${propName} = JsonUtility.ParseArray(reader, ${type}.Deserialize);`,
       writeCode: (propName: string) => 
-        `jsonWriter.WriteArray(nameof(${propName}), ${propName});`
+        `writer.WriteArray(nameof(${propName}), ${propName});`
     }
   }
 
   const primitiveTemplates: {[dataType:string]: TypeTemplate} = {
     'string': {
-      readCode: (propName: string) => `${propName} = jsonReader.ReadSafeAsString();`,
+      readCode: (propName: string) => `${propName} = reader.ReadSafeAsString();`,
       writeCode: (propName: string) => `writer.Write(nameof(${propName}), ${propName});`
     },
     'bool': {
-      readCode: (propName: string) => `${propName} = jsonReader.ReadSafeAsBoolean();`,
+      readCode: (propName: string) => `${propName} = reader.ReadSafeAsBoolean();`,
       writeCode: (propName: string) => `writer.Write(nameof(${propName}), ${propName});`
     },
     'Guid': {
-      readCode: (propName: string) => `${propName} = jsonReader.ReadSafeAsGuid();`,
+      readCode: (propName: string) => `${propName} = reader.ReadSafeAsGuid();`,
       writeCode: (propName: string) => `writer.Write(nameof(${propName}), ${propName});`
     },
     'IReadOnlyCollection<string>': {
-      readCode: (propName: string) => `${propName} = JsonUtility.ParseArray(jsonReader, r => r.ReadSafeAsString());`,
+      readCode: (propName: string) => `${propName} = JsonUtility.ParseArray(reader, r => r.ReadSafeAsString());`,
       writeCode: (propName: string) => `writer.WriteArray(nameof(${propName}), ${propName}, (w, s) => w.WriteValue(s));`
     }
   };
@@ -114,20 +114,20 @@ namespace ${namespaceMatch[1]}
 
     public void InitializeFromJson(JsonReader jsonReader)
     {
-      JsonUtility.ReadFromJson(jsonReader, ReadJsonProperty);
+      JsonUtility.ReadFromJson(jsonReader, ReadProperty);
     }
 
     public void WriteToJson(JsonWriter jsonWriter)
     {
-      jsonWriter.WriteObject(
-        writer =>
-        {
-          ${fields.map(f => getTemplate(f.dataType).writeCode(f.name)).join('\n          ')}
-        }
-      );
+      jsonWriter.WriteObject(WriteProperties);
     }
 
-    private bool ReadJsonProperty(JsonReader jsonReader, string propertyName)
+    public void WriteProperties(JsonWriter writer)
+    {
+          ${fields.map(f => getTemplate(f.dataType).writeCode(f.name)).join('\n      ')}
+    }
+
+    public bool ReadProperty(JsonReader reader, string propertyName)
     {
       switch(propertyName)
       {
@@ -142,7 +142,7 @@ namespace ${namespaceMatch[1]}
   }
 }
 
-// created by https://derive-definition-code.stackblitz.io/
+// created by https://derive-definition-code.stackblitz.io/ version 0.2
 `
   document.getElementById('target').innerHTML = result.trim();
 });
