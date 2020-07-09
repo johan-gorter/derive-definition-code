@@ -124,7 +124,7 @@ namespace ${namespaceMatch[1]}
 
     public void WriteProperties(JsonWriter writer)
     {
-          ${fields.map(f => getTemplate(f.dataType).writeCode(f.name)).join('\n      ')}
+      ${fields.map(f => getTemplate(f.dataType).writeCode(f.name)).join('\n      ')}
     }
 
     public bool ReadProperty(JsonReader reader, string propertyName)
@@ -142,7 +142,7 @@ namespace ${namespaceMatch[1]}
   }
 }
 
-// created by https://derive-definition-code.stackblitz.io/ version 0.2
+// created by https://derive-definition-code.stackblitz.io/ version 0.4
 `
   document.getElementById('target').innerHTML = result.trim();
 });
